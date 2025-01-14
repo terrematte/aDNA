@@ -45,7 +45,7 @@ import plotly.express as px
 import streamlit as st
 import plotly.graph_objects as go
 #from itables.streamlit import interactive_table
-from PIL import Image
+#from PIL import Image
 import os
 from pathlib import Path
 #Adding a browser title
