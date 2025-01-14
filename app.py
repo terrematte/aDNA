@@ -50,20 +50,7 @@ import os
 from pathlib import Path
 #Adding a browser title
 st.set_page_config(page_title="Ancient DNA and Schizophrenia with Haplo Tracker",page_icon=":dna:",layout="wide",initial_sidebar_state="collapsed")
-def load_css():
-    """
-    Function to load custom CSS styles.
-    """
-    streamlit_static_path = Path(st.__path__[0]) / 'static'
-    css_path = streamlit_static_path / "css"
-    if not css_path.is_dir():
-        css_path.mkdir()
-    css_file = css_path / "style.css"
-    if not css_file.exists():
-        css_file.write_text(open("assests/style.css", "r").read())
-    st.markdown(f'<link rel="stylesheet" href="{os.path.join("/", str(css_file))}">', unsafe_allow_html=True)
 
-#load_css()
 st.markdown(f'<link rel="stylesheet" href="assests/style.css">', unsafe_allow_html=True)
 #Hiding the main menu and footer {visibility: hidden;}
 hide_streamlit_style = """
@@ -104,7 +91,7 @@ with tab1:
     st.subheader(subtitle)
     url = "https://github.com/Nikhilesh-Vasanthakumar/Haplotracker"
     st.markdown('''This study investigated the evolutionary dynamics of polygenic risk scores (PRS) for schizophrenia in ancient human populations, 
-analyzing genomes spanning from the Early Upper Paleolithic to the Post-Neolithic period.
+analyzing genomes spanning from the Early Upper Paleolithic to the Post-Neolithic period.\n
 The results revealed significant fluctuations in PRS over time, with a reduction observed during the Paleolithic and a notable increase from the Neolithic onward.
 **Keywords:** schizophrenia, polygenic risk, ancient DNA, human evolution, Neanderthal introgression, selective pressures.
                 ''')
@@ -119,9 +106,8 @@ a robust repository that provides curated and standardized data for analyses of 
 _Polygenic risk for schizophrenia: from the Paleolithic to the post-Neolithic._
 Thiago Felipe Fonseca Nunes de Oliveira¹, Priscilla Kelly², Patrick Terrematte¹, Raul Maia Falcão¹, Jorge Estefano Santana de Souza¹, Sandro de Souza¹ and Sidarta Ribeiro². 
 _To be published._
-Affiliations
-¹ Bioinformatics Multidisciplinary Environment (BioME), Digital Metropolis Institute (IMD), Federal University of Rio Grande do Norte (UFRN), Brazil.
-² Brain Institute, UFRN, Natal, RN, Brazil
+- ¹ Bioinformatics Multidisciplinary Environment (BioME), Digital Metropolis Institute (IMD), Federal University of Rio Grande do Norte (UFRN), Brazil.
+- ² Brain Institute, UFRN, Natal, RN, Brazil
 
 #### Contact
 If you have some question, feedback, or request, contact the Corresponding author:
@@ -153,9 +139,13 @@ with tab2:
     data_sorted = data.sort_values(by='Date')
     fig03 = px.line(data_sorted, x='Date', y='SCORE', markers=True, color='Region')
 
-    colors = [px.colors.qualitative.Pastel[3], px.colors.qualitative.Pastel[4],  px.colors.qualitative.Pastel[5], px.colors.qualitative.Pastel[7]]
+    colors = [px.colors.qualitative.Pastel[3], px.colors.qualitative.Pastel[4],  px.colors.qualitative.Pastel[5], 
+              px.colors.qualitative.Pastel[7]]
     shapes = []
-    bgs = [[0, 4000], [4000, 8000], [8000, 13000], [1300, max(data_sorted.Date)+1000]]
+    bgs = [[0, 4000], 
+           [4000, 8000], 
+           [8000, 13000], 
+           [13000, max(data_sorted.Date)+1000]]
     for i, b in enumerate(bgs):
         shapes.append(dict(type="rect",
                     xref="x",
@@ -168,6 +158,8 @@ with tab2:
                     opacity=0.3,
                     layer="below",
                     line_width=0))
+        fig03.add_annotation(text=periods[3-i], textangle=315, 
+                  x=(b[0]+b[1])/2, y=min(data_sorted.SCORE), showarrow=False,)
 
     fig03.update_layout(#xaxis=dict(showgrid=False),
                     shapes=shapes)
