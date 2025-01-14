@@ -63,7 +63,8 @@ def load_css():
         css_file.write_text(open("assests/style.css", "r").read())
     st.markdown(f'<link rel="stylesheet" href="{os.path.join("/", str(css_file))}">', unsafe_allow_html=True)
 
-load_css()
+#load_css()
+st.markdown(f'<link rel="stylesheet" href="assests/style.css">', unsafe_allow_html=True)
 #Hiding the main menu and footer {visibility: hidden;}
 hide_streamlit_style = """
             <style>
