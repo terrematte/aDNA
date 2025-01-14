@@ -37,14 +37,14 @@ User Guide:
     """
 #Create a streamlit app to track the movement of haplogroups over time
 #Importing the required libraries
-import matplotlib.pyplot as plt
-import seaborn as sns
+#import matplotlib.pyplot as plt
+#import seaborn as sns
 import tap
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 import plotly.graph_objects as go
-from itables.streamlit import interactive_table
+#from itables.streamlit import interactive_table
 from PIL import Image
 import os
 from pathlib import Path
