@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Mar  7 10:29:19 2023
-Haplogroup Tracker.py
+The haplogroup-tracker is adapted from Haplogroup Tracker.py
 
-@author: Nikhilesh Vasanthakumar
 Description: This script is used to track the movement of haplogroups over time using streamlit and plotly libraries.
 The script takes the data from the excel file and plots the haplogroups on the map based on the user input. 
 The user can select the haplogroups to be plotted on the map and the map type. 
@@ -41,6 +39,12 @@ User Guide:
 #import seaborn as sns
 import tap
 import pandas as pd
+from pandas.api.types import (
+    is_categorical_dtype,
+    is_datetime64_any_dtype,
+    is_numeric_dtype,
+    is_object_dtype,
+)
 import plotly.express as px
 import streamlit as st
 import plotly.graph_objects as go
@@ -60,13 +64,112 @@ hide_streamlit_style = """
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+
+
+def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Adds a UI on top of a dataframe to let viewers filter columns
+
+    Args:
+        df (pd.DataFrame): Original dataframe
+
+    Returns:
+        pd.DataFrame: Filtered dataframe
+    """
+    modify = st.checkbox("Add filters")
+
+    if not modify:
+        return df
+
+    df = df.copy()
+
+    # Try to convert datetimes into a standard format (datetime, no timezone)
+    for col in df.columns:
+        if is_object_dtype(df[col]):
+            try:
+                df[col] = pd.to_datetime(df[col])
+            except Exception:
+                pass
+
+        if is_datetime64_any_dtype(df[col]):
+            df[col] = df[col].dt.tz_localize(None)
+
+    modification_container = st.container()
+
+    with modification_container:
+        to_filter_columns = st.multiselect("Filter dataframe on", df.columns)
+        for column in to_filter_columns:
+            left, right = st.columns((1, 20))
+            left.write("↳")
+            # Treat columns with < 10 unique values as categorical
+            if is_categorical_dtype(df[column]) or df[column].nunique() < 10:
+                user_cat_input = right.multiselect(
+                    f"Values for {column}",
+                    df[column].unique(),
+                    default=list(df[column].unique()),
+                )
+                df = df[df[column].isin(user_cat_input)]
+            elif is_numeric_dtype(df[column]):
+                _min = float(df[column].min())
+                _max = float(df[column].max())
+                step = (_max - _min) / 100
+                user_num_input = right.slider(
+                    f"Values for {column}",
+                    _min,
+                    _max,
+                    (_min, _max),
+                    step=step,
+                )
+                df = df[df[column].between(*user_num_input)]
+            elif is_datetime64_any_dtype(df[column]):
+                user_date_input = right.date_input(
+                    f"Values for {column}",
+                    value=(
+                        df[column].min(),
+                        df[column].max(),
+                    ),
+                )
+                if len(user_date_input) == 2:
+                    user_date_input = tuple(map(pd.to_datetime, user_date_input))
+                    start_date, end_date = user_date_input
+                    df = df.loc[df[column].between(start_date, end_date)]
+            else:
+                user_text_input = right.text_input(
+                    f"Substring or regex in {column}",
+                )
+                if user_text_input:
+                    df = df[df[column].str.contains(user_text_input)]
+
+    return df
+
+
+
 #Reading the data
-#data=pd.read_excel("Data/Eurasian.xlsx") #Rename the file name to the file name of the data ifyou want to use your own data.
-data=pd.read_csv("Data/data.csv")
+data=pd.read_csv("Data/data.csv", sep="\t")
+
+data=data.rename(columns={'Continente':'Region', 'Período Histórico': 'Historical Period', 'PRS_Normalizado': 'PRS_SCZ'})
+
 # Selecting the required columns from the data
 data=data[["Molecular Sex","Lat.","Long.","Region","mtDNA haplogroup if >2x or published",
            "Date mean in BP in years before 1950 CE [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]",
-           "Political Entity", "SCORE", "Historical Period"]]
+           "Political Entity", "PRS_SCZ", "Historical Period"]]
+
+mapa_paises_continentes = {
+    'Nigeria': 'África', 'USA': 'América', 'Russia': 'Ásia', 'Puerto Rico': 'América', 'Spain': 'Europa',
+    'United Kingdom': 'Europa', 'India': 'Ásia', 'Sri Lanka': 'Ásia', 'Turkmenistan': 'Ásia', 'Uzbekistan': 'Ásia',
+    'Pakistan': 'Ásia', 'China': 'Ásia', 'Tajikistan': 'Ásia', 'Kazakhstan': 'Ásia', 'Kyrgyzstan': 'Ásia',
+    'Peru': 'América', 'Mexico': 'América', 'Bahamas': 'América', 'Finland': 'Europa', 'Venezuela': 'América',
+    'Canada': 'América', 'Iceland': 'Europa', 'Greenland': 'América', 'Nepal': 'Ásia', 'Norway': 'Europa',
+    'Cuba': 'América', 'Haiti': 'América', 'Belize': 'América', 'Dominican Republic': 'América', 'Jordan': 'Ásia',
+    'France': 'Europa', 'Chile': 'América', 'Ireland': 'Europa', 'Argentina': 'América', 'Morocco': 'África',
+    'Hungary': 'Europa', 'Guadeloupe': 'América', 'Tonga': 'Oceania', 'French Polynesia': 'Oceania', 'Sudan': 'África'
+}
+
+# Atualizar a coluna 'Continente' com base no mapeamento direto
+for pais, continente in mapa_paises_continentes.items():
+    data.loc[(data['Region'] == 'Indeterminado') & (data['Political Entity'] == pais), 'Region'] = continente
+
 # Renaming the columns for ease of use
 data=data.rename(columns={'Lat.':'Lat','Long.':'Long',
                           'Molecular Sex':'Sex',
@@ -74,11 +177,13 @@ data=data.rename(columns={'Lat.':'Lat','Long.':'Long',
                           'mtDNA haplogroup if >2x or published':'mtdna',
                           'Historical Period':'Period',
                           'Date mean in BP in years before 1950 CE [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]':'Date'})
-data["Lat"] = data["Lat"].str.replace(",", ".").astype(float) 
-data["Long"] = data["Long"].str.replace(",", ".").astype(float) 
-data["SCORE"] = data["SCORE"].str.replace(",", ".").astype(float) 
-data=data.drop(data[data.Region=="Indeterminado"].index) 
-#data=data.drop(data[data.Lat==".."].index) #dropping the rows with missing values
+
+#data["Lat"] = data["Lat"].str.replace(",", ".").astype(float) 
+#data["Long"] = data["Long"].str.replace(",", ".").astype(float) 
+#data["PRS_SCZ"] = data["PRS_SCZ"].str.replace(",", ".").astype(float) 
+#data=data.drop(data[data.Region=="Indeterminado"].index) 
+data["mtdna"] = data["mtdna"].str.replace('n/a (<2x)', "..")
+data=data.drop(data[data.Lat==".."].index) #dropping the rows with missing values
     
 #Creating a title for the app
 title_text = "Ancient DNA and Schizophrenia"
@@ -90,19 +195,18 @@ tab1, tab2, tab3 = st.tabs(["Home", "Exploratory Data Analysis", "HaploTracker"]
 with tab1:
     st.subheader(subtitle)
     url = "https://github.com/Nikhilesh-Vasanthakumar/Haplotracker"
-    st.markdown('''This study investigated the evolutionary dynamics of polygenic risk scores (PRS) for schizophrenia in ancient human populations, 
-analyzing genomes spanning from the Early Upper Paleolithic to the Post-Neolithic period.\n
-The results revealed significant fluctuations in PRS over time, with a reduction observed during the Paleolithic and a notable increase from the Neolithic onward.
+    st.markdown('''This study investigated the evolutionary dynamics of polygenic risk PRS_SCZs (PRS) for schizophrenia in ancient human populations, 
+analyzing genomes spanning from the Early Upper Paleolithic to the Post-Neolithic period. The results revealed significant fluctuations in PRS over time, with a reduction observed during the Paleolithic and a notable increase from the Neolithic onward.
 **Keywords:** schizophrenia, polygenic risk, ancient DNA, human evolution, Neanderthal introgression, selective pressures.
                 ''')
   
-# These variations appear to be related to changes in selective pressures and social transformations brought about by the advent of agriculture and the growth of sedentary societies. During the Paleolithic, negative selection may have reduced the frequency of schizophrenia risk alleles, reflecting the need for social cohesion and cognitive skills in small hunter-gatherer groups. In contrast, in the Neolithic, increasing social complexity and the development of caregiving practices may have favored the persistence of genetic variants associated with schizophrenia. Additionally, demographic factors such as population bottlenecks, founder effects, and genetic drift may have influenced the distribution of these alleles over time. The study also highlights the relevance of Neanderthal DNA introgression in modern genetic composition and its possible impact on psychiatric disorders. The integration of ancient genomic data with emerging technologies and advanced analytical methodologies offers new perspectives for understanding the evolution of complex conditions such as schizophrenia. The findings underscore the importance of including diverse populations in genetic studies and adopting interdisciplinary approaches to investigate the interplay between genetic, cultural, and environmental factors. This work contributes to understanding the evolutionary foundations of schizophrenia, emphasizing the complex relationship between genetic and social evolution.          
+# These variations appear to be related to changes in selective pressures and social transformations brought about by the advent of agriculture and the growth of sedentary societies. During the Paleolithic, negative selection may have reduced the frequency of schizophrenia risk alleles, reflecting the need for social cohesion and cognitive skills in small hunter-gatherer groups. In contrast, in the Neolithic, increasing social complexity and the development of caregiving practices may have favored the persistence of genetic variants associated with schizophrenia. Additionally, demographic factors such as population bottlenecks, founder effects, and genetic drift may have influenced the distribution of these alleles over time. The study also highlights the relevance of Neanderthal DNA introgression in modern genetic composition and its possible impact on psychiatric disorders. The integration of ancient genomic data with emerging technologies and advanced analytical methodologies offers new perspectives for understanding the evolution of complex conditions such as schizophrenia. The findings underPRS_SCZ the importance of including diverse populations in genetic studies and adopting interdisciplinary approaches to investigate the interplay between genetic, cultural, and environmental factors. This work contributes to understanding the evolutionary foundations of schizophrenia, emphasizing the complex relationship between genetic and social evolution.          
     st.markdown('''
-### Dataset source 
+#### Dataset source 
 The ancient genotypes used in this study were obtained from the [Allen Ancient DNA Resource (AADR)](https://reich.hms.harvard.edu/allen-ancient-dna-resource-aadr-downloadable-genotypes-present-day-and-ancient-dna-data), 
 a robust repository that provides curated and standardized data for analyses of population history and natural selection. 
                 
-### How to cite:
+#### How to cite:
 _Polygenic risk for schizophrenia: from the Paleolithic to the post-Neolithic._
 Thiago Felipe Fonseca Nunes de Oliveira¹, Priscilla Kelly², Patrick Terrematte¹, Raul Maia Falcão¹, Jorge Estefano Santana de Souza¹, Sandro de Souza¹ and Sidarta Ribeiro². 
 _To be published._
@@ -110,34 +214,48 @@ _To be published._
 - ² Brain Institute, UFRN, Natal, RN, Brazil
 
 #### Contact
-If you have some question, feedback, or request, contact the Corresponding author:
-(patrick.terrematte [at] ufrn.br) 
+If you have some question, feedback, or request, contact the corresponding author.
+
+#### Data
  ''')
+    st.dataframe(filter_dataframe(data))
     
     
 with tab2:
     st.subheader("Exploratory Data Analysis")
-    periods=['Paleolítico', 'Mesolítico', 'Neolítico', 'Pós-Neolítico']
+    col1,col2=st.columns(2)
+    with col1: 
+        period_order = ['Paleolítico', 'Mesolítico', 'Neolítico', 'Pós-Neolítico', "Total"]
+        df_cros = pd.crosstab(data['Region'], data['Period']) #, colnames=period_order)
+        df_cros['Total'] = df_cros.sum(axis=1)
+        df_cros.columns = period_order
+        fig02 = px.imshow(df_cros, text_auto=True)
+        st.plotly_chart(fig02)
+
+    with col2:
+        # Tab 02 - Figure 03 - Barplot
+        periods=['Paleolítico', 'Mesolítico', 'Neolítico', 'Pós-Neolítico']
+        fig03 = px.histogram(data, x="Period", color="Region", text_auto=False)
+        fig03.update_xaxes(categoryorder='array', categoryarray=periods)
+        #fig03.update_layout(xaxis={'categoryorder': order})
+        st.plotly_chart(fig03)
+
     x = "Period"
-    y = "SCORE"
+    y = "PRS_SCZ"
     fig00 = tap.plot_stats(data, x, y, order=periods, type_correction="bonferroni", type_test="dunn") 
     st.plotly_chart(fig00)
 
     x = "Region"
-    y = "SCORE"
+    y = "PRS_SCZ"
     order = ['África','Ásia','Europa','América', 'Oceania']
     pairs=[("África", "Ásia"), ("África", "América"), ("África", "Europa"), ('América','Ásia'), 
            ('América','Europa'), ('América','Oceania')           ]
     fig01 = tap.plot_stats(data, x, y, type_correction="bonferroni", order=order) # , pairs=pairs
     st.plotly_chart(fig01)
-
-    fig02 = px.histogram(data, x="Period", color="Region", text_auto=False)
-    fig02.update_xaxes(categoryorder='array', categoryarray=periods)
-    #fig02.update_layout(xaxis={'categoryorder': order})
-    st.plotly_chart(fig02)
     
+      
     data_sorted = data.sort_values(by='Date')
-    fig03 = px.line(data_sorted, x='Date', y='SCORE', markers=True, color='Region')
+    fig04 = px.line(data_sorted, x='Date', y='PRS_SCZ', markers=True, color='Region')
 
     colors = [px.colors.qualitative.Pastel[3], px.colors.qualitative.Pastel[4],  px.colors.qualitative.Pastel[5], 
               px.colors.qualitative.Pastel[7]]
@@ -158,15 +276,15 @@ with tab2:
                     opacity=0.3,
                     layer="below",
                     line_width=0))
-        fig03.add_annotation(text=periods[3-i], textangle=315, 
-                  x=(b[0]+b[1])/2, y=min(data_sorted.SCORE), showarrow=False,)
+        fig04.add_annotation(text=periods[3-i], textangle=315, 
+                  x=(b[0]+b[1])/2, y=min(data_sorted.PRS_SCZ), showarrow=False,)
 
-    fig03.update_layout(#xaxis=dict(showgrid=False),
+    fig04.update_layout(#xaxis=dict(showgrid=False),
                     shapes=shapes)
 
-    fig03.update_layout(xaxis = dict(autorange="reversed") )
+    fig04.update_layout(xaxis = dict(autorange="reversed") )
 
-    st.plotly_chart(fig03)
+    st.plotly_chart(fig04)
 
     
 
@@ -187,7 +305,7 @@ with tab3:
                 periods = ['Paleolítico', 'Mesolítico', 'Neolítico', 'Pós-Neolítico']
                 for p in periods:
                     fig00.add_trace(go.Violin(x=mtgeo['Period'][mtgeo['Period'] == p],
-                                    y=mtgeo['SCORE'][mtgeo['Period'] == p],
+                                    y=mtgeo['PRS_SCZ'][mtgeo['Period'] == p],
                                     name=p,
                                     box_visible=True,
                                     meanline_visible=True))
@@ -415,7 +533,7 @@ with tab3:
                                 ]
                             )
                             st.plotly_chart(fig3)   #plotting the figure
-                    fig4 = px.line(select, x='Date', y='SCORE', markers=True, color='Region')
+                    fig4 = px.line(select, x='Date', y='PRS_SCZ', markers=True, color='Region')
                     #fig1.update_traces(line=dict(color = 'rgba(50,50,50,0.2)'))
                     fig4.update_layout(
                         xaxis = dict(autorange="reversed")
@@ -455,4 +573,3 @@ with tab3:
         Onlyfemale_mtdna() #calling the Onlyfemale_mtdna function
     elif haplogroup_select=="Y-Chromosome": #If the user selects the y-chrom mode
         Onlymale_ychrom()   #calling the Onlymale_ychrom function
-
