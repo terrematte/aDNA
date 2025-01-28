@@ -178,12 +178,12 @@ data=data.rename(columns={'Lat.':'Lat','Long.':'Long',
                           'Historical Period':'Period',
                           'Date mean in BP in years before 1950 CE [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]':'Date'})
 
-data["Lat"] = data["Lat"].str.astype(float) 
-data["Long"] = data["Long"].str.astype(float)
+data=data.drop(data[data.Lat==".."].index) #dropping the rows with missing values
+data["Lat"] = data["Lat"].replace('',np.nan).astype(float) # df.a.replace('',np.nan).astype(float)
+data["Long"] = data["Long"].replace('',np.nan).astype(float)
 #data["PRS_SCZ"] = data["PRS_SCZ"].str.replace(",", ".").astype(float) 
 #data=data.drop(data[data.Region=="Indeterminado"].index) 
 data["mtdna"] = data["mtdna"].str.replace('n/a (<2x)', "..")
-data=data.drop(data[data.Lat==".."].index) #dropping the rows with missing values
     
 #Creating a title for the app
 title_text = "Ancient DNA and Schizophrenia"
