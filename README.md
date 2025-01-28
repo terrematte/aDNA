@@ -6,11 +6,6 @@ analyzing genomes spanning from the Early Upper Paleolithic to the Post-Neolithi
 The results revealed significant fluctuations in PRS over time, with a reduction observed during the Paleolithic and a notable increase from the Neolithic onward.
 **Keywords:** schizophrenia, polygenic risk, ancient DNA, human evolution, Neanderthal introgression, selective pressures.
 
-This study investigated the evolutionary dynamics of polygenic risk scores (PRS) for schizophrenia in ancient human populations, 
-analyzing genomes spanning from the Early Upper Paleolithic to the Post-Neolithic period.
-The results revealed significant fluctuations in PRS over time, with a reduction observed during the Paleolithic and a notable increase from the Neolithic onward.
-**Keywords:** schizophrenia, polygenic risk, ancient DNA, human evolution, Neanderthal introgression, selective pressures.
-
 ### Dataset source 
 The ancient genotypes used in this study were obtained from the [Allen Ancient DNA Resource (AADR)](https://reich.hms.harvard.edu/allen-ancient-dna-resource-aadr-downloadable-genotypes-present-day-and-ancient-dna-data), 
 a robust repository that provides curated and standardized data for analyses of population history and natural selection. 
