@@ -179,8 +179,8 @@ data=data.rename(columns={'Lat.':'Lat','Long.':'Long',
                           'Date mean in BP in years before 1950 CE [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]':'Date'})
 
 data=data.drop(data[data.Lat==".."].index) #dropping the rows with missing values
-data["Lat"] = data["Lat"].replace('',np.nan).astype(float) # df.a.replace('',np.nan).astype(float)
-data["Long"] = data["Long"].replace('',np.nan).astype(float)
+data["Lat"] = data["Lat"].astype(float)
+data["Long"] = data["Long"].astype(float)
 #data["PRS_SCZ"] = data["PRS_SCZ"].str.replace(",", ".").astype(float) 
 #data=data.drop(data[data.Region=="Indeterminado"].index) 
 data["mtdna"] = data["mtdna"].str.replace('n/a (<2x)', "..")
