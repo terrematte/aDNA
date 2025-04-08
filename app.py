@@ -148,7 +148,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 #Reading the data
 data=pd.read_csv("Data/data_pca.csv", sep=",")
 
-data=data.rename(columns={'Continente':'Region', 'Período Histórico': 'Historical Period', 'PRS_Normalizado': 'PRS_20PCs'})
+data=data.rename(columns={'Continente':'Region', 'Período Histórico': 'Historical Period', 'PRS_20PCs': 'PRS_SCZ'})
 
 # Selecting the required columns from the data
 data=data[["Molecular Sex","Lat.","Long.","Region","mtDNA haplogroup if >2x or published",
