@@ -146,7 +146,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 #Reading the data
-data=pd.read_csv("Data/data.csv", sep="\t")
+data=pd.read_csv("Data/data.csv", sep="," )
 
 data=data.rename(columns={'Continente':'Region', 'Período Histórico': 'Historical Period', 'PRS_Normalizado': 'PRS_SCZ'})
 
